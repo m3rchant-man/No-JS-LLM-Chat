@@ -1,6 +1,6 @@
-# Zero JavaScript Chat Application with OpenRouter AI
+# No-JS-LLM-Chat
 
-A non-streaming AI chat application built with Spring Boot and OpenRouter that demonstrates how to create web applications with **absolutely zero JavaScript** - not even HTMX or any JavaScript libraries.
+A zero JavaScript LLM chat application built with Spring Boot and OpenRouter that demonstrates how to create web applications with **absolutely zero JavaScript** - not even HTMX or any JavaScript libraries.
 
 ## Features
 

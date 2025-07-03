@@ -12,10 +12,10 @@
     </parent>
 
     <groupId>com.chatapp</groupId>
-    <artifactId>htmx-chat</artifactId>
+    <artifactId>No-JS-LLM-Chat</artifactId>
     <version>1.0.0</version>
-    <name>HTMX Chat Application</name>
-    <description>A non-streaming AI chat application using HTMX and Spring Boot</description>
+    <name>No-JS-LLM-Chat</name>
+    <description>Zero JavaScript LLM Chat Application (Spring Boot, No JS, LLM, OpenRouter)</description>
 
     <properties>
         <java.version>17</java.version>
