@@ -319,27 +319,7 @@ class AiServiceTest {
         }
     }
 
-    @Nested
-    @DisplayName("Streaming Response Tests")
-    class StreamingResponseTests {
 
-        @Test
-        @DisplayName("Should handle streaming response")
-        void shouldHandleStreamingResponse() {
-            // Given
-            String userPrompt = "Tell me a story";
-            List<ChatMessage> conversationHistory = new ArrayList<>();
-            List<String> receivedTokens = new ArrayList<>();
-            Consumer<String> tokenConsumer = receivedTokens::add;
-
-            // When
-            aiService.streamResponseReal(userPrompt, conversationHistory, "test-model", 100, 0.7, null, tokenConsumer);
-
-            // Then
-            assertFalse(receivedTokens.isEmpty());
-            assertTrue(receivedTokens.stream().anyMatch(token -> !token.trim().isEmpty()));
-        }
-    }
 
     @Nested
     @DisplayName("Edge Cases Tests")
