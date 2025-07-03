@@ -8,6 +8,10 @@ Zero JavaScript. 90% Java. 10% HTML.
 
 A chat application built with Spring Boot and OpenRouter that demonstrates server-side rendering without any client-side scripting. Spring Boot handles the logic, Thymeleaf renders the HTML, and the user gets a fully functional chat interface through server-side processing with bleeding edge java pulled from the year 2000.
 
+## Screenshot
+
+![No-JS-LLM-Chat Interface](screenshot.png)
+
 ## Features
 
 - **Zero JavaScript**: No client-side code execution
