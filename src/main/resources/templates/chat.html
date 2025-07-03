@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zero JavaScript Chat Application with Streaming</title>
+    
+    <!-- No meta refresh - using CSS flexbox for auto-scroll -->
+    
+    <style>
+        /* Pure CSS styling - no JavaScript dependencies */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f9fafb;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 64rem;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .header h1 {
+            font-size: 1.875rem;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: #6b7280;
+        }
+        
+        .chat-container {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .chat-log {
+            height: 24rem;
+            overflow-y: auto;
+            padding: 1.5rem;
+            scroll-behavior: smooth;
+        }
+        
+        /* Ensure smooth scrolling behavior */
+        .chat-log {
+            scroll-behavior: smooth;
+        }
+        
+        /* Scroll anchor styling - positioned at bottom of chat log */
+        #chat-bottom {
+            height: 1px;
+            margin-top: 1rem;
+            visibility: hidden;
+            scroll-margin-bottom: 1rem;
+        }
+        
+        /* Turn anchor styling - positioned at each message turn */
+        [id^="turn-"] {
+            height: 1px;
+            margin-top: 0.5rem;
+            visibility: hidden;
+            scroll-margin-top: 1rem;
+        }
+        
+        .message {
+            margin-bottom: 1rem;
+        }
+        
+        .user-message {
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .ai-message {
+            display: flex;
+            justify-content: flex-start;
+        }
+        
+        .message-content {
+            max-width: 20rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+        }
+        
+        .user-content {
+            background-color: #3b82f6;
+            color: white;
+        }
+        
+        .ai-content {
+            background-color: #e5e7eb;
+            color: #1f2937;
+        }
+        
+        .message-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        
+        .edit-button {
+            font-size: 0.75rem;
+            color: #bfdbfe;
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin-top: 0.25rem;
+            display: block;
+        }
+        
+        .edit-button:hover {
+            color: white;
+        }
+        
+        .chat-form {
+            border-top: 1px solid #e5e7eb;
+            padding: 1rem;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .message-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.5rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .message-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .send-button {
+            padding: 0.5rem 1.5rem;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        
+        .send-button:hover {
+            background-color: #2563eb;
+        }
+        
+        .send-button:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .edit-form {
+            background-color: #3b82f6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            max-width: 20rem;
+        }
+        
+        .edit-input {
+            width: 100%;
+            padding: 0.25rem 0.5rem;
+            border: none;
+            border-radius: 0.25rem;
+            margin-bottom: 0.5rem;
+            color: #1f2937;
+        }
+        
+        .edit-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .edit-button-small {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+        }
+        
+        .save-button {
+            background-color: #2563eb;
+            color: white;
+        }
+        
+        .cancel-button {
+            background-color: #6b7280;
+            color: white;
+        }
+        
+        .error-message {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        /* Menu System Styles */
+        .menu-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .menu-button {
+            background-color: #3b82f6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            margin: 0 0.25rem;
+        }
+        
+        .menu-button:hover {
+            background-color: #2563eb;
+        }
+        
+        .popup-menu {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            min-width: 300px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .popup-menu.show {
+            display: block;
+        }
+        
+        /* Simple form-based popup system */
+        .menu-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .popup-menu {
+            display: none;
+        }
+        
+        .popup-menu.show {
+            display: block;
+        }
+        
+        /* Menu button styling */
+        .menu-button {
+            cursor: pointer;
+            outline: none;
+        }
+        
+        .menu-button:focus {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+        
+        .menu-header {
+            background-color: #f3f4f6;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #d1d5db;
+            border-radius: 0.5rem 0.5rem 0 0;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .menu-content {
+            padding: 1rem;
+        }
+        
+        .menu-item {
+            margin-bottom: 1rem;
+        }
+        
+        .menu-item label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+        
+        .menu-item input, .menu-item select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+        
+        .menu-item input:focus, .menu-item select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .menu-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .menu-button-primary {
+            background-color: #3b82f6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+        
+        .menu-button-secondary {
+            background-color: #6b7280;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+        
+        .menu-button-primary:hover {
+            background-color: #2563eb;
+        }
+        
+        .menu-button-secondary:hover {
+            background-color: #4b5563;
+        }
+        
+
+        
+        .header-actions {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .image-upload-label {
+            display: flex;
+            align-items: center;
+            background-color: #f3f4f6;
+            color: #1f2937;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-left: 1em;
+            transition: background 0.2s, border 0.2s;
+            position: relative;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        
+        .image-upload-label:hover, .image-upload-label:focus-within {
+            background-color: #e0e7ef;
+            border-color: #3b82f6;
+        }
+        
+        .image-upload-icon {
+            margin-right: 0.5em;
+            font-size: 1.2em;
+        }
+        
+        .image-upload-input {
+            display: none;
+        }
+        
+        .image-upload-filename {
+            margin-left: 0.5em;
+            font-size: 0.95em;
+            color: #2563eb;
+            font-style: italic;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 10em;
+        }
+        
+        .chat-image {
+            display: block;
+            margin-top: 0.5em;
+            max-width: 220px;
+            max-height: 180px;
+            border-radius: 0.5em;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        /* Mobile responsive styles */
+        @media (max-width: 768px) {
+            .form-row {
+                gap: 0.75rem;
+            }
+            
+            .message-input {
+                min-width: 150px;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+            
+            .image-upload-label {
+                margin-left: 0;
+                font-size: 0.9rem;
+                padding: 0.5rem 0.75rem;
+            }
+            
+            .send-button {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+            
+            .container {
+                padding: 0.5rem;
+            }
+            
+            .chat-form {
+                padding: 0.75rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .form-row {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .message-input {
+                min-width: 100%;
+                order: 1;
+            }
+            
+            .image-upload-label {
+                order: 2;
+                margin-left: 0;
+                flex: 1;
+            }
+            
+            .send-button {
+                order: 2;
+                flex: 1;
+            }
+            
+            .header-actions {
+                gap: 0.75rem;
+            }
+            
+            .menu-button {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Zero JavaScript Chat Application</h1>
+            <p>A streaming AI chat application with zero JavaScript</p>
+            
+            <!-- Menu Buttons -->
+            <div class="header-actions">
+                <div class="menu-container">
+                    <form method="get" action="/config#chat-bottom" style="display: inline;">
+                        <button type="submit" class="menu-button">Config</button>
+                    </form>
+                    <div class="popup-menu" th:classappend="${showConfigMenu ? 'show' : ''}">
+                        <div class="menu-header">AI Configuration</div>
+                        <div class="menu-content" style="display: flex; gap: 2rem;">
+                            <div style="flex: 1; min-width: 180px;">
+                                <!-- Chat config options column (history, max turns, temp, tokens) -->
+                                <form method="post" action="/config/ai">
+                                    <input type="hidden" name="aiModel" th:value="${selectedModel}" />
+                                    <div class="menu-item">
+                                        <label for="historyEnabled">Chat History</label>
+                                        <select name="historyEnabled" id="historyEnabled">
+                                            <option value="true" th:selected="${config.historyEnabled == true}">Enabled</option>
+                                            <option value="false" th:selected="${config.historyEnabled == false}">Disabled</option>
+                                        </select>
+                                    </div>
+                                    <div class="menu-item">
+                                        <label for="maxHistoryTurns">Max History Turns</label>
+                                        <input type="number" name="maxHistoryTurns" id="maxHistoryTurns" 
+                                               th:value="${config.maxHistoryTurns}" min="1" max="20" value="10">
+                                    </div>
+                                    <div class="menu-item">
+                                        <label for="temperature">Temperature</label>
+                                        <input type="number" name="temperature" id="temperature" step="0.01" min="0" max="2" th:value="${config.temperature}" value="0.7">
+                                        <small>Controls randomness (0 = deterministic, 2 = very random)</small>
+                                    </div>
+                                    <div class="menu-item">
+                                        <label for="maxTokens">Max Tokens</label>
+                                        <input type="number" name="maxTokens" id="maxTokens" min="1" max="4096" th:value="${config.maxTokens}" value="1000">
+                                        <small>Limits the length of AI responses</small>
+                                    </div>
+                                    <div class="menu-item">
+                                        <label for="streamingEnabled">Streaming</label>
+                                        <select name="streamingEnabled" id="streamingEnabled">
+                                            <option value="true" th:selected="${config.streamingEnabled == true}">Enabled</option>
+                                            <option value="false" th:selected="${config.streamingEnabled == false}">Disabled</option>
+                                        </select>
+                                        <small>Enable real-time streaming of AI responses</small>
+                                    </div>
+                                    <div class="menu-item">
+                                        <label for="streamingUpdateRate">Streaming Update Rate (seconds)</label>
+                                        <input type="number" name="streamingUpdateRate" id="streamingUpdateRate" 
+                                               min="0.5" max="10" step="0.5" th:value="${config.streamingUpdateRate}" value="1">
+                                        <small>How frequently the streaming updates (0.5-10 seconds)</small>
+                                    </div>
+                                    <div class="menu-actions">
+                                        <a href="/#chat-bottom" class="menu-button-secondary">Cancel</a>
+                                        <button type="submit" class="menu-button-primary" th:disabled="${selectedModel == null}">Save</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <div style="flex: 1; min-width: 220px;">
+                                <!-- Provider/model selection column -->
+                                <form method="get" action="/config#chat-bottom" th:if="${showConfigMenu}">
+                                    <div class="menu-item">
+                                        <label for="provider">Provider</label>
+                                        <select name="provider" id="provider">
+                                            <option value="" th:selected="${selectedProvider == null && (config.aiModel == null || config.aiModel == '')}">-- Select Provider --</option>
+                                            <option th:each="prov : ${providers}"
+                                                    th:value="${prov}"
+                                                    th:text="${prov}"
+                                                    th:selected="${(selectedProvider != null ? selectedProvider : (config.aiModel != null && config.aiModel.contains('/') ? config.aiModel.split('/')[0] : null)) == prov}"></option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="menu-button-primary" style="margin-left: 0.5em; padding: 0.2em 0.7em; font-size: 0.9em;">Go</button>
+                                    <input type="hidden" name="model" th:value="${selectedModel}" />
+                                </form>
+                                <form method="get" action="/config#chat-bottom" th:if="${selectedProvider != null}">
+                                    <input type="hidden" name="provider" th:value="${selectedProvider}" />
+                                    <div class="menu-item">
+                                        <label for="model">Model</label>
+                                        <select name="model" id="model">
+                                            <option value="" th:selected="${selectedModel == null && (config.aiModel == null || config.aiModel == '')}">-- Select Model --</option>
+                                            <option th:each="m : ${modelsForProvider}"
+                                                    th:value="${m.id}"
+                                                    th:text="${m.name} + ' (' + m.id + ')'"
+                                                    th:selected="${(selectedModel != null ? selectedModel : config.aiModel) == m.id}"></option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="menu-button-primary" style="margin-left: 0.5em; padding: 0.2em 0.7em; font-size: 0.9em;">Go</button>
+                                </form>
+                                <!-- Show all model metadata except description, id, name -->
+                                <div class="menu-item" th:if="${selectedModel != null}">
+                                    <div th:each="m : ${modelsForProvider}" th:if="${m.id == selectedModel}">
+                                        <div th:if="${m.architecture != null && m.architecture.inputModalities != null}"><strong>Input Modalities:</strong> <span th:text="${m.architecture.inputModalities}"></span></div>
+                                        <div th:if="${m.architecture != null && m.architecture.outputModalities != null}"><strong>Output Modalities:</strong> <span th:text="${m.architecture.outputModalities}"></span></div>
+                                        <div th:if="${m.architecture != null && m.architecture.tokenizer != null}"><strong>Tokenizer:</strong> <span th:text="${m.architecture.tokenizer}"></span></div>
+                                        <div th:if="${m.architecture != null && m.architecture.instructType != null}"><strong>Instruct Type:</strong> <span th:text="${m.architecture.instructType}"></span></div>
+                                        <div th:if="${m.topProvider != null && m.topProvider.contextLength != null}"><strong>Provider Context Length:</strong> <span th:text="${m.topProvider.contextLength}"></span></div>
+                                        <div th:if="${m.topProvider != null && m.topProvider.maxCompletionTokens != null}"><strong>Provider Max Completion Tokens:</strong> <span th:text="${m.topProvider.maxCompletionTokens}"></span></div>
+                                        <div th:if="${m.topProvider != null && m.topProvider.moderated != null}"><strong>Provider Moderated:</strong> <span th:text="${m.topProvider.moderated}"></span></div>
+                                    </div>
+                                </div>
+                                <!-- System Prompt -->
+                                <form method="post" action="/config/ai">
+                                    <input type="hidden" name="aiModel" th:value="${selectedModel}" />
+                                    <input type="hidden" name="historyEnabled" th:value="${config.historyEnabled}" />
+                                    <input type="hidden" name="maxHistoryTurns" th:value="${config.maxHistoryTurns}" />
+                                    <input type="hidden" name="temperature" th:value="${config.temperature}" />
+                                    <input type="hidden" name="maxTokens" th:value="${config.maxTokens}" />
+                                    <input type="hidden" name="streamingEnabled" th:value="${config.streamingEnabled}" />
+                                    <input type="hidden" name="streamingUpdateRate" th:value="${config.streamingUpdateRate}" />
+                                    <div class="menu-item">
+                                        <label for="systemPrompt">System Prompt</label>
+                                        <textarea name="systemPrompt" id="systemPrompt" 
+                                                  rows="6" cols="40" 
+                                                  placeholder="Enter a system prompt to guide AI behavior..."
+                                                  style="width: 100%; min-height: 100px; resize: vertical; font-family: monospace; font-size: 0.9em;"
+                                                  th:text="${config.systemPrompt}"></textarea>
+                                        <small>Optional: Define AI behavior, personality, or context for all conversations</small>
+                                    </div>
+                                    <div class="menu-actions">
+                                        <button type="submit" class="menu-button-primary" th:disabled="${selectedModel == null}">Save System Prompt</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <div style="flex: 1; min-width: 220px;">
+                                <!-- Description only -->
+                                <div class="menu-item">
+                                    <div><strong>Description</strong></div>
+                                    <div th:if="${selectedModel != null}">
+                                        <div th:each="m : ${modelsForProvider}" th:if="${m.id == selectedModel}">
+                                            <div><span style="font-size:0.9em; color:#555;" th:text="${m.description}"></span></div>
+                                        </div>
+                                    </div>
+                                    <div th:if="${selectedModel == null && config.aiModel != null}">
+                                        <div th:each="m : ${modelsForProvider}" th:if="${m.id == config.aiModel}">
+                                            <div><span style="font-size:0.9em; color:#555;" th:text="${m.description}"></span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="menu-container">
+                    <form method="get" action="/data#chat-bottom" style="display: inline;">
+                        <button type="submit" class="menu-button">Data</button>
+                    </form>
+                    <div class="popup-menu" th:classappend="${showDataMenu ? 'show' : ''}">
+                        <div class="menu-header">Chat Data Management</div>
+                        <div class="menu-content">
+                            <div class="menu-item">
+                                <label>Current Messages</label>
+                                <div th:text="${#lists.size(messages)} + ' messages'"></div>
+                            </div>
+                            <div class="menu-item">
+                                <label>Actions</label>
+                                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <form method="post" action="/chat/clear#chat-bottom" style="margin: 0;">
+                                        <button type="submit" class="menu-button-secondary" style="width: 100%;">
+                                            Clear All Messages
+                                        </button>
+                                    </form>
+                                    <form method="post" action="/chat/export" style="margin: 0;" target="_blank">
+                                        <button type="submit" class="menu-button-primary" style="width: 100%;">
+                                            Export Chat History
+                                        </button>
+                                    </form>
+                                    <form method="post" action="/chat/import#chat-bottom" enctype="multipart/form-data" style="margin: 0;">
+                                        <input type="file" name="file" accept="application/json" required style="margin-bottom: 0.3em; width: 100%;" />
+                                        <button type="submit" class="menu-button-primary" style="width: 100%;">
+                                            Import Chat Data
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="menu-actions">
+                                <a href="/#chat-bottom" class="menu-button-secondary">Close</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <form method="post" action="/logout" style="display: inline;">
+                    <button type="submit" class="menu-button" style="background-color: #ef4444;">Logout</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Chat Container -->
+        <div class="chat-container">
+            <!-- Chat Log -->
+            <div class="chat-log">
+                <!-- Render each message individually -->
+                <th:block th:each="msg,iter : ${messages}">
+                    <div th:id="'turn-' + ${iter.index}"></div>
+                    <div th:id="'message-' + ${msg.id}" th:classappend="${msg.type.name() == 'USER'} ? 'user-message' : 'ai-message'">
+                        <th:block th:if="${editingMessageId == msg.id}">
+                            <form th:action="@{'/chat/message/' + ${msg.id} + '/save#turn-' + ${iter.index}}" method="post" enctype="multipart/form-data" class="edit-form">
+                                <textarea name="prompt" class="edit-input" required rows="3" style="resize:vertical; min-height:2.5em; font-family:inherit; font-size:1em;">[[${editingMessageContent}]]</textarea>
+                                <label for="edit-image-upload" class="image-upload-label">
+                                    <span class="image-upload-icon">📷</span> Change Image
+                                </label>
+                                <input id="edit-image-upload" type="file" name="image" accept="image/*" class="image-upload-input" style="display:none;">
+                                <div class="edit-buttons">
+                                    <button type="submit" class="edit-button-small save-button">Save</button>
+                                    <a th:href="@{'/chat/message/' + ${msg.id} + '/view#turn-' + ${iter.index}}" class="edit-button-small cancel-button">Cancel</a>
+                                </div>
+                            </form>
+                        </th:block>
+                        <th:block th:unless="${editingMessageId == msg.id}">
+                            <div class="message-content" th:classappend="${msg.type.name() == 'USER'} ? ' user-content' : ' ai-content'">
+                                <div class="message-label" th:text="${msg.type.name() == 'USER'} ? 'You' : 'AI'"></div>
+                                <div th:text="${msg.content}" style="white-space: pre-wrap;"></div>
+                                <th:block th:if="${msg.imageBase64 != null}">
+                                    <img th:src="@{'data:image/*;base64,' + ${msg.imageBase64}}" alt="User uploaded image" class="chat-image" />
+                                </th:block>
+                                <div style="display: flex; justify-content: flex-end; gap: 0.5em; margin-top: 0.5em;">
+                                    <a th:href="@{'/chat/message/' + ${msg.id} + '/edit#turn-' + ${iter.index}}" class="edit-button">Edit</a>
+                                    <th:block th:if="${msg.type.name() == 'AI'} and ${iter.index > 0} and ${messages[iter.index-1].type.name() == 'USER'}">
+                                        <form method="post" th:action="@{'/chat/message/' + ${messages[iter.index-1].id} + '/regenerate'}" style="display:inline;">
+    <input type="hidden" name="anchor" th:value="'#turn-' + ${iter.index}" />
+                                            <button type="submit" class="edit-button" style="color: #22c55e;">Regenerate</button>
+                                        </form>
+                                    </th:block>
+                                    <form method="post" th:action="@{'/chat/message/' + ${msg.id} + '/delete#chat-bottom'}" style="display:inline;">
+                                        <button type="submit" class="edit-button" style="color: #dc2626;">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </th:block>
+                    </div>
+                </th:block>
+                <!-- Streaming AI message (first AI response, only when streamingActive) -->
+                <div class="ai-message" th:if="${streamingActive}">
+                    <div class="message-content ai-content">
+                        <!-- Streaming iframe for progressive AI response -->
+                        <iframe
+                            id="ai-stream-frame"
+                            th:src="@{'/chat/stream-frame?t=' + ${#strings.length(streamingProgress)} + '&c=' + ${#strings.length(streamingProgress)} + '&p=' + ${streamingPrompt != null ? #strings.length(streamingPrompt) : 0}}"
+                            style="width:100%; min-height:3em; border:none; background:transparent;"
+                            th:title="'AI response stream - ' + ${#strings.length(streamingProgress)} + ' chars'"
+                        ></iframe>
+                        <div style="color: #666; font-style: italic; margin-top: 10px;">⏳ Streaming in progress...</div>
+                    </div>
+                </div>
+                <!-- Scroll anchor at the bottom of chat log -->
+                <div id="chat-bottom"></div>
+            </div>
+            
+            <!-- Chat Input Form -->
+            <div class="chat-form">
+                <!-- Standard (non-streaming) input bar -->
+                <form method="post" action="/chat#chat-bottom" class="form-row" enctype="multipart/form-data" th:if="${!config.streamingEnabled}">
+                    <textarea name="prompt"
+                              autocomplete="off"
+                              placeholder="Type your message..."
+                              class="message-input"
+                              required
+                              rows="2"
+                              style="resize:vertical; min-height:2.5em; font-family:inherit; font-size:1em;"></textarea>
+                    <label for="image-upload" class="image-upload-label">
+                        <span class="image-upload-icon">📷</span> Attach Image
+                    </label>
+                    <input id="image-upload" type="file" name="image" accept="image/*" class="image-upload-input" style="display:none;">
+                    <button type="submit" class="send-button">Send</button>
+                </form>
+                <!-- Streaming input bar (only visible when streaming is enabled) -->
+                <form method="post" action="/chat/stream#chat-bottom" class="form-row" enctype="multipart/form-data" th:if="${config.streamingEnabled}">
+                    <textarea name="prompt"
+                              autocomplete="off"
+                              placeholder="Type your message and stream..."
+                              class="message-input"
+                              required
+                              rows="2"
+                              style="resize:vertical; min-height:2.5em; font-family:inherit; font-size:1em;"></textarea>
+                    <label for="stream-image-upload" class="image-upload-label">
+                        <span class="image-upload-icon">📷</span> Attach Image
+                    </label>
+                    <input id="stream-image-upload" type="file" name="image" accept="image/*" class="image-upload-input" style="display:none;">
+                    <button type="submit" class="send-button" style="background-color: #10b981;">Stream</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Error Display -->
+        <div th:if="${error}" class="error-message" th:text="${error}"></div>
+    </div>
+</body>
+</html> 
