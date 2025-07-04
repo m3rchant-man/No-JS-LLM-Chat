@@ -24,7 +24,7 @@ A chat application built with Spring Boot and OpenRouter that demonstrates serve
 
 ## Architecture
 
-This application follows a simple principle: the browser is a display device.
+This application follows a simple principle: The Browser as a Display (BaaD). 
 
 1. **Frontend**: HTML forms and CSS
 2. **Backend**: Spring Boot with Thymeleaf
